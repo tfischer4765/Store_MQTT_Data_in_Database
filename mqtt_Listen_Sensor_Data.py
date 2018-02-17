@@ -7,13 +7,14 @@
 #------------------------------------------
 
 import paho.mqtt.client as mqtt
+import UnknownTopicError
 from store_Sensor_Data_to_DB import sensor_Data_Handler
 
-# MQTT Settings 
+# MQTT Settings
 MQTT_Broker = "iot.eclipse.org"
 MQTT_Port = 1883
 Keep_Alive_Interval = 45
-MQTT_Topic = "Home/BedRoom/#"
+MQTT_Topic = "sensors/#"
 
 #Subscribe to all Sensors at Base Topic
 def on_connect(mosq, obj, rc):
@@ -24,9 +25,12 @@ def on_message(mosq, obj, msg):
 	# This is the Master Call for saving MQTT Data into DB
 	# For details of "sensor_Data_Handler" function please refer "sensor_data_to_db.py"
 	print "MQTT Data Received..."
-	print "MQTT Topic: " + msg.topic  
+	print "MQTT Topic: " + msg.topic
 	print "Data: " + msg.payload
-	sensor_Data_Handler(msg.topic, msg.payload)
+	try:
+		sensor_Data_Handler(msg.topic, msg.payload)
+	except UnknownTopicError as e:
+		 print ("unknown topic received: ",e.args)
 
 def on_subscribe(mosq, obj, mid, granted_qos):
     pass

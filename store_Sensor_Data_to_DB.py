@@ -1,28 +1,36 @@
-#------------------------------------------
-#--- Author: Pradeep Singh
-#--- Date: 20th January 2017
-#--- Version: 1.0
-#--- Python Ver: 2.7
-#--- Details At: https://iotbytes.wordpress.com/store-mqtt-data-from-sensors-into-sql-database/
-#------------------------------------------
+# ------------------------------------------
+# --- Author: Pradeep Singh
+# --- Date: 20th January 2017
+# --- Version: 1.0
+# --- Python Ver: 2.7
+# --- Details At:
+# https://iotbytes.wordpress.com/store-mqtt-data-from-sensors-into-sql-database/
+# ------------------------------------------
 
 
-import json
-import sqlite3
+import UnknownTopicError
+import MySQLdb
 
 # SQLite DB Name
-DB_Name =  "IoT.db"
+DB_Name = "iot_test"
+db_server = "nas"
+db_user = "iot_test"
+db_past = "Password1"
 
-#===============================================================
+# ===============================================================
 # Database Manager Class
+
 
 class DatabaseManager():
 	def __init__(self):
-		self.conn = sqlite3.connect(DB_Name)
-		self.conn.execute('pragma foreign_keys = on')
-		self.conn.commit()
+		self.conn = MySQLdb.connect(host=db_server,
+									user=db_user,
+									passwd=db_past,
+									db=DB_Name)
+		# self.conn.execute('pragma foreign_keys = on')
+		# self.conn.commit()
 		self.cur = self.conn.cursor()
-		
+
 	def add_del_update_db_record(self, sql_query, args=()):
 		self.cur.execute(sql_query, args)
 		self.conn.commit()
@@ -32,47 +40,40 @@ class DatabaseManager():
 		self.cur.close()
 		self.conn.close()
 
-#===============================================================
+# ===============================================================
 # Functions to push Sensor Data into Database
 
+
 # Function to save Temperature to DB Table
-def DHT22_Temp_Data_Handler(jsonData):
-	#Parse Data 
-	json_Dict = json.loads(jsonData)
-	SensorID = json_Dict['Sensor_ID']
-	Data_and_Time = json_Dict['Date']
-	Temperature = json_Dict['Temperature']
-	
-	#Push into DB Table
+def push_temp_data(Temperature,Sensor):
+	# Push into DB Table
 	dbObj = DatabaseManager()
-	dbObj.add_del_update_db_record("insert into DHT22_Temperature_Data (SensorID, Date_n_Time, Temperature) values (?,?,?)",[SensorID, Data_and_Time, Temperature])
+	dbObj.add_del_update_db_record("insert into temperatures (sensor,  temperature) values (?,?)", [Sensor, Temperature])
 	del dbObj
 	print "Inserted Temperature Data into Database."
 	print ""
 
+
 # Function to save Humidity to DB Table
-def DHT22_Humidity_Data_Handler(jsonData):
-	#Parse Data 
-	json_Dict = json.loads(jsonData)
-	SensorID = json_Dict['Sensor_ID']
-	Data_and_Time = json_Dict['Date']
-	Humidity = json_Dict['Humidity']
-	
-	#Push into DB Table
+def push_voltage_data(Voltage, Sensor):
+
+	# Push into DB Table
 	dbObj = DatabaseManager()
-	dbObj.add_del_update_db_record("insert into DHT22_Humidity_Data (SensorID, Date_n_Time, Humidity) values (?,?,?)",[SensorID, Data_and_Time, Humidity])
+	dbObj.add_del_update_db_record("insert into voltages (sensor, voltage) values (?,?)", [Sensor, Voltage])
 	del dbObj
-	print "Inserted Humidity Data into Database."
+	print "Inserted Voltage Data into Database."
 	print ""
 
 
-#===============================================================
+# ===============================================================
 # Master Function to Select DB Funtion based on MQTT Topic
 
-def sensor_Data_Handler(Topic, jsonData):
-	if Topic == "Home/BedRoom/DHT22/Temperature":
-		DHT22_Temp_Data_Handler(jsonData)
-	elif Topic == "Home/BedRoom/DHT22/Humidity":
-		DHT22_Humidity_Data_Handler(jsonData)	
+def sensor_Data_Handler(Topic, data):
+	if Topic.contains("voltage"):
+		push_voltage_data(data,Topic)
+	elif Topic.contains("temperature"):
+		push_temp_data(data,Topic)
+	else:
+		raise UnknownTopicError(Topic)
 
-#===============================================================
+# ===============================================================
