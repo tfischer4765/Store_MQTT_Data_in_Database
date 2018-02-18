@@ -37,8 +37,11 @@ class DatabaseManager():
 		return
 
 	def __del__(self):
-		self.cur.close()
-		self.conn.close()
+		try:
+			self.cur.close()
+			self.conn.close()
+		finally:
+			print ("Cleaned up")
 
 # ===============================================================
 # Functions to push Sensor Data into Database
@@ -48,10 +51,10 @@ class DatabaseManager():
 def push_temp_data(Temperature,Sensor):
 	# Push into DB Table
 	dbObj = DatabaseManager()
-	dbObj.add_del_update_db_record("insert into temperatures (sensor,  temperature) values (?,?)", [Sensor, Temperature])
+	dbObj.add_del_update_db_record("""insert into temperatures (source,  temperature) values (%s,%s)""", [Sensor, Temperature])
 	del dbObj
-	print "Inserted Temperature Data into Database."
-	print ""
+	#print ("Inserted Temperature Data into Database.")
+	#print ("")
 
 
 # Function to save Humidity to DB Table
@@ -59,19 +62,19 @@ def push_voltage_data(Voltage, Sensor):
 
 	# Push into DB Table
 	dbObj = DatabaseManager()
-	dbObj.add_del_update_db_record("insert into voltages (sensor, voltage) values (?,?)", [Sensor, Voltage])
+	dbObj.add_del_update_db_record("""insert into voltages (source, voltage) values (%s,%s)""", [Sensor, Voltage])
 	del dbObj
-	print "Inserted Voltage Data into Database."
-	print ""
+	#print ("Inserted Voltage Data into Database.")
+	#print ("")
 
 
 # ===============================================================
 # Master Function to Select DB Funtion based on MQTT Topic
 
 def sensor_Data_Handler(Topic, data):
-	if Topic.contains("voltage"):
+	if Topic.find("voltage")>-1:
 		push_voltage_data(data,Topic)
-	elif Topic.contains("temperature"):
+	elif Topic.find("temperature")>-1:
 		push_temp_data(data,Topic)
 	else:
 		raise UnknownTopicError(Topic)
